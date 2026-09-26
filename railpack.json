@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "golang",
+  "steps": {
+    "build": {
+      "commands": [
+        "go build -trimpath -ldflags='-s -w' -o bin/server ./cmd/server"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "./bin/server"
+  }
+}
