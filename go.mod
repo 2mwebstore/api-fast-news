@@ -1,6 +1,6 @@
 module github.com/cambodia-fast-news/backend
 
-go 1.24
+go 1.26.0
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.75.0
