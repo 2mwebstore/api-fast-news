@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -192,6 +193,23 @@ func (s *SettingsService) TelegramCredentials(ctx context.Context) (token, chann
 		}
 	}
 	return token, channel, autoPublish
+}
+
+// SiteNames resolves the site's name in both languages: database first,
+// SITE_NAME / SITE_NAME_KH from the environment as the fallback. A name
+// cleared in the admin therefore falls back to the deployment's default rather
+// than leaving the site nameless.
+func (s *SettingsService) SiteNames(ctx context.Context) (en, kh string) {
+	values := s.load(ctx)
+	en = strings.TrimSpace(values[models.SettingSiteName])
+	if en == "" {
+		en = s.cfg.App.SiteName
+	}
+	kh = strings.TrimSpace(values[models.SettingSiteNameKh])
+	if kh == "" {
+		kh = s.cfg.App.SiteNameKH
+	}
+	return en, kh
 }
 
 // TelegramView is the admin-safe projection: the token is masked, never sent.

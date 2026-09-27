@@ -23,11 +23,17 @@ type Setting struct {
 
 // Setting keys. Anything listed in secretSettingKeys is encrypted at rest.
 const (
-	SettingTelegramBotToken   = "telegram.bot_token"
-	SettingTelegramChannelID  = "telegram.channel_id"
+	SettingTelegramBotToken    = "telegram.bot_token"
+	SettingTelegramChannelID   = "telegram.channel_id"
 	SettingTelegramAutoPublish = "telegram.auto_publish"
-	SettingSiteName           = "site.name"
-	SettingSiteNameKh         = "site.name_kh"
+	SettingSiteName            = "site.name"
+	SettingSiteNameKh          = "site.name_kh"
+	// The logo is a URL: an upload to the media bucket, or a path on the site.
+	// Empty means the built-in mark drawn beside the site name.
+	SettingSiteLogoURL = "site.logo_url"
+	// Whether the site name is written beside an uploaded logo. Off suits a
+	// logo that already contains the name; on suits an icon-only mark.
+	SettingSiteLogoShowName = "site.logo_show_name"
 )
 
 // SecretSettingKeys are stored encrypted and never returned in plaintext.

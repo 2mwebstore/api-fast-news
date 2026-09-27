@@ -121,7 +121,11 @@ func main() {
 	trendingSvc := services.NewTrendingService(db, c)
 	viewSvc := services.NewViewService(db, c)
 	adSvc := services.NewAdService(db, c)
-	seoSvc := seo.NewService(db, articleRepo, cfg)
+	// The News sitemap's publication name follows the name saved in the admin.
+	seoSvc := seo.NewService(db, articleRepo, cfg).WithSiteName(func(ctx context.Context) string {
+		name, _ := settingsSvc.SiteNames(ctx)
+		return name
+	})
 
 	logStartupCapabilities(context.Background(), cfg, mediaSvc, aiSvc, telegramSvc)
 

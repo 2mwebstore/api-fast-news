@@ -56,6 +56,8 @@ const (
 	FolderAd      Folder = "ad"
 	FolderVideo   Folder = "video"
 	FolderTip     Folder = "tip"
+	// FolderSite holds site branding, such as the logo.
+	FolderSite Folder = "site"
 )
 
 // Upload is the result of storing one object.

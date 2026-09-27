@@ -18,7 +18,7 @@ type Media struct {
 	AltEn      string `gorm:"size:512" json:"altEn"`
 	Caption    string `gorm:"size:512" json:"caption"`
 	Credit     string `gorm:"size:191" json:"credit"`
-	Folder     string `gorm:"size:64;index;default:article" json:"folder"` // article|author|ad|video
+	Folder     string `gorm:"size:64;index;default:article" json:"folder"` // article|author|ad|video|tip|site
 	IsAIGenerated bool `gorm:"default:false;index" json:"isAiGenerated"`
 	// AIPrompt records which library prompt produced an AI image (§25), so an
 	// illustrative image can always be traced back.

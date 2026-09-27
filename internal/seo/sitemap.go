@@ -28,10 +28,25 @@ type Service struct {
 	db       *gorm.DB
 	articles *repositories.ArticleRepository
 	cfg      *config.Config
+	// siteName is the publication name in the News sitemap. It starts as
+	// SITE_NAME; WithSiteName makes it follow the admin setting.
+	siteName func(context.Context) string
 }
 
 func NewService(db *gorm.DB, articles *repositories.ArticleRepository, cfg *config.Config) *Service {
-	return &Service{db: db, articles: articles, cfg: cfg}
+	return &Service{
+		db: db, articles: articles, cfg: cfg,
+		siteName: func(context.Context) string { return cfg.App.SiteName },
+	}
+}
+
+// WithSiteName swaps in a dynamic resolver, so a name saved in the admin is
+// the one Google News sees.
+func (s *Service) WithSiteName(fn func(context.Context) string) *Service {
+	if fn != nil {
+		s.siteName = fn
+	}
+	return s
 }
 
 // URLSet is the standard sitemap document.
@@ -156,6 +171,7 @@ func (s *Service) BuildNewsSitemap(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 
+	publication := s.siteName(ctx)
 	set := URLSet{Xmlns: nsSitemap, XmlnsNews: nsNews}
 	for _, r := range rows {
 		// Prefer the Khmer headline: it is the canonical language of the page,
@@ -172,7 +188,7 @@ func (s *Service) BuildNewsSitemap(ctx context.Context) ([]byte, error) {
 			Loc: s.cfg.App.URL + "/news/" + r.Slug,
 			News: &NewsInfo{
 				Publication: Publication{
-					Name:     s.cfg.App.SiteName,
+					Name:     publication,
 					Language: language,
 				},
 				PublicationDate: r.PublishedAt.UTC().Format(time.RFC3339),

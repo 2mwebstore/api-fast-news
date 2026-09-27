@@ -38,7 +38,7 @@ func (ctl *MediaController) Upload(c *gin.Context) {
 
 	folder := media.Folder(c.DefaultPostForm("folder", string(media.FolderArticle)))
 	switch folder {
-	case media.FolderArticle, media.FolderAuthor, media.FolderAd, media.FolderVideo, media.FolderTip:
+	case media.FolderArticle, media.FolderAuthor, media.FolderAd, media.FolderVideo, media.FolderTip, media.FolderSite:
 	default:
 		httpx.BadRequest(c, httpx.CodeValidation, "Unknown media folder")
 		return

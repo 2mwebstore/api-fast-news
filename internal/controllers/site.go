@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/cambodia-fast-news/backend/internal/httpx"
 	"github.com/cambodia-fast-news/backend/internal/middleware"
+	"github.com/cambodia-fast-news/backend/internal/models"
 	"github.com/cambodia-fast-news/backend/internal/services"
 )
 
@@ -29,7 +31,14 @@ func NewSiteController(settings *services.SettingsService, audit *services.Audit
 // siteKeys are the settings this controller owns, with their defaults. Keeping
 // the defaults here rather than in the footer means an unconfigured install
 // still renders correct text.
+//
+// The two names have no default here: theirs come from SITE_NAME and
+// SITE_NAME_KH in the environment (see SettingsService.SiteNames).
 var siteKeys = []struct{ key, fallback string }{
+	{models.SettingSiteName, ""},
+	{models.SettingSiteNameKh, ""},
+	{models.SettingSiteLogoURL, ""},
+	{models.SettingSiteLogoShowName, "false"},
 	{"site.tagline_kh", "ព័ត៌មានលឿនរហ័សកម្ពុជា — ព័ត៌មានទាន់ហេតុការណ៍ ត្រឹមត្រូវ និងអាចទុកចិត្តបាន។"},
 	{"site.tagline_en", "Cambodia Fast News — timely, accurate and trustworthy reporting."},
 	{"site.contact_email", ""},
@@ -82,10 +91,16 @@ func (ctl *SiteController) Get(c *gin.Context) {
 		}
 	}
 
+	nameEn, nameKh := ctl.settings.SiteNames(ctx)
+
 	// Public and cacheable: it changes when an administrator edits it, not per
-	// reader, and every page renders the footer.
+	// reader, and every page renders the header and footer.
 	c.Header("Cache-Control", "public, max-age=300")
 	httpx.OK(c, gin.H{
+		"nameEn":       nameEn,
+		"nameKh":       nameKh,
+		"logoUrl":      value(models.SettingSiteLogoURL),
+		"logoShowName": value(models.SettingSiteLogoShowName) == "true",
 		"taglineKh":    value("site.tagline_kh"),
 		"taglineEn":    value("site.tagline_en"),
 		"contactEmail": value("site.contact_email"),
@@ -103,6 +118,9 @@ func (ctl *SiteController) AdminGet(c *gin.Context) {
 	for _, k := range siteKeys {
 		out[k.key] = ctl.settings.Get(ctx, k.key, k.fallback)
 	}
+	// The effective names, so the form shows what readers see rather than a
+	// blank field when the environment default is in force.
+	out[models.SettingSiteName], out[models.SettingSiteNameKh] = ctl.settings.SiteNames(ctx)
 	c.Header("Cache-Control", "private, no-store")
 	httpx.OK(c, out)
 }
@@ -130,8 +148,13 @@ func (ctl *SiteController) AdminSave(c *gin.Context) {
 			continue
 		}
 		value = strings.TrimSpace(value)
+		if msg := validateSiteValue(key, value); msg != "" {
+			httpx.BadRequest(c, httpx.CodeValidation, msg)
+			return
+		}
 		// A URL field must look like one, or a typo becomes a broken public link.
-		if strings.HasSuffix(key, "_url") && value != "" && !strings.HasPrefix(value, "https://") {
+		if strings.HasSuffix(key, "_url") && key != models.SettingSiteLogoURL &&
+			value != "" && !strings.HasPrefix(value, "https://") {
 			httpx.BadRequest(c, httpx.CodeValidation,
 				"Social profile links must start with https://")
 			return
@@ -146,4 +169,32 @@ func (ctl *SiteController) AdminSave(c *gin.Context) {
 	ctl.audit.Record(ctx, userID, "settings.site.save", "settings", nil,
 		"site details updated", nil)
 	httpx.OK(c, gin.H{"saved": saved})
+}
+
+// maxSiteNameLength keeps a name short enough to sit in the header on a phone
+// and in a browser tab.
+const maxSiteNameLength = 80
+
+// validateSiteValue checks the branding fields. It returns a message for the
+// editor, or "" when the value is acceptable.
+func validateSiteValue(key, value string) string {
+	switch key {
+	case models.SettingSiteName, models.SettingSiteNameKh:
+		if utf8.RuneCountInString(value) > maxSiteNameLength {
+			return "The site name must be 80 characters or fewer"
+		}
+	case models.SettingSiteLogoURL:
+		// An upload (https) or a file on this site ("/icons/..."). Plain http
+		// would be blocked as mixed content on an https page, and "//host"
+		// is someone else's server dressed up as a path.
+		if value != "" && !strings.HasPrefix(value, "https://") &&
+			!(strings.HasPrefix(value, "/") && !strings.HasPrefix(value, "//")) {
+			return "The logo must be an uploaded image or a link starting with https://"
+		}
+	case models.SettingSiteLogoShowName:
+		if value != "true" && value != "false" {
+			return "Show name must be true or false"
+		}
+	}
+	return ""
 }
